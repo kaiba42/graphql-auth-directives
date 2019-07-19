@@ -10,7 +10,10 @@ import {
 } from "graphql";
 
 const verifyAndDecodeToken = ({ context }) => {
-  const req = context instanceof IncomingMessage ? context : (context.req || context.request);
+  const req =
+    context instanceof IncomingMessage
+      ? context
+      : context.req || context.request;
 
   if (
     !req ||
@@ -65,13 +68,17 @@ export class HasScopeDirective extends SchemaDirectiveVisitor {
     field.resolve = function(result, args, context, info) {
       const decoded = verifyAndDecodeToken({ context });
 
-      // FIXME: override with env var
-      const scopes =
-        decoded["Scopes"] ||
-        decoded["scopes"] ||
-        decoded["Scope"] ||
-        decoded["scope"] ||
-        [];
+      const scopes = process.env.AUTH_DIRECTIVES_SCOPE_KEY
+        ? process.env.AUTH_DIRECTIVES_SCOPE_KEY.split("|").reduce(
+            (acc, scopeKey) => acc.concat(decoded[scopeKey] || []),
+            []
+          )
+        : decoded["Scopes"] ||
+          decoded["scopes"] ||
+          decoded["Scope"] ||
+          decoded["scope"] ||
+          decoded["permissions"] ||
+          [];
 
       if (expectedScopes.some(scope => scopes.indexOf(scope) !== -1)) {
         return next(result, args, context, info);
@@ -93,13 +100,17 @@ export class HasScopeDirective extends SchemaDirectiveVisitor {
       field.resolve = function(result, args, context, info) {
         const decoded = verifyAndDecodeToken({ context });
 
-        // FIXME: override w/ env var
-        const scopes =
-          decoded["Scopes"] ||
-          decoded["scopes"] ||
-          decoded["Scope"] ||
-          decoded["scope"] ||
-          [];
+        const scopes = process.env.AUTH_DIRECTIVES_SCOPE_KEY
+          ? process.env.AUTH_DIRECTIVES_SCOPE_KEY.split("|").reduce(
+              (acc, scopeKey) => acc.concat(decoded[scopeKey] || []),
+              []
+            )
+          : decoded["Scopes"] ||
+            decoded["scopes"] ||
+            decoded["Scope"] ||
+            decoded["scope"] ||
+            decoded["permissions"] ||
+            [];
 
         if (expectedScopes.some(role => scopes.indexOf(role) !== -1)) {
           return next(result, args, context, info);
@@ -135,7 +146,10 @@ export class HasRoleDirective extends SchemaDirectiveVisitor {
 
       // FIXME: override with env var
       const roles = process.env.AUTH_DIRECTIVES_ROLE_KEY
-        ? decoded[process.env.AUTH_DIRECTIVES_ROLE_KEY] || []
+        ? process.env.AUTH_DIRECTIVES_ROLE_KEY.split("|").reduce(
+            (acc, scopeKey) => acc.concat(decoded[scopeKey] || []),
+            []
+          )
         : decoded["Roles"] ||
           decoded["roles"] ||
           decoded["Role"] ||
@@ -163,7 +177,10 @@ export class HasRoleDirective extends SchemaDirectiveVisitor {
         const decoded = verifyAndDecodeToken({ context });
 
         const roles = process.env.AUTH_DIRECTIVES_ROLE_KEY
-          ? decoded[process.env.AUTH_DIRECTIVES_ROLE_KEY] || []
+          ? process.env.AUTH_DIRECTIVES_ROLE_KEY.split("|").reduce(
+              (acc, scopeKey) => acc.concat(decoded[scopeKey] || []),
+              []
+            )
           : decoded["Roles"] ||
             decoded["roles"] ||
             decoded["Role"] ||
